@@ -10,8 +10,7 @@
 
 ###1. Relocation with `$` uglyfication
 Allows class relocation patterns to contain `$` sign.
-Also ending pattern with `$` sign will also prepend
-dollar sign to the front of class names.
+If pattern ends with `$` sign, the dollar sign will be prepended in front of class names.
 This effectively prevents clashed during code completion.
 
 ```xml

@@ -174,7 +174,7 @@ public class MinijarFilter
                             if ( depClazzpathUnit.getClazzes().contains( clazz ) //
                                 && simpleFilter.isSpecificallyIncluded( clazz.getName().replace( '.', '/' ) ) )
                             {
-                                log.info( clazz.getName() + " not removed because it was specifically included" );
+                                log.debug( clazz.getName() + " not removed because it was specifically included" );
                                 j.remove();
                             }
                         }

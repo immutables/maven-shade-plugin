@@ -19,18 +19,15 @@ package org.apache.maven.plugins.shade.resource;
  * under the License.
  */
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarOutputStream;
 import org.apache.maven.plugins.shade.relocation.Relocator;
 import org.codehaus.plexus.util.IOUtil;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
 
 /**
  * Resources transformer that appends entries in META-INF/services resources into

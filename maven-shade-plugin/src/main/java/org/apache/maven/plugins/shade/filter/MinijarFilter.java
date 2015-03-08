@@ -1,3 +1,18 @@
+/*
+    Copyright 2015 Immutables Authors and Contributors
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+ */
 package org.apache.maven.plugins.shade.filter;
 
 /*
@@ -19,195 +34,111 @@ package org.apache.maven.plugins.shade.filter;
  * under the License.
  */
 
-import org.apache.maven.artifact.Artifact;
-import org.apache.maven.plugin.logging.Log;
-import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.IOUtil;
-import org.vafer.jdependency.Clazz;
-import org.vafer.jdependency.Clazzpath;
-import org.vafer.jdependency.ClazzpathUnit;
-
+import com.google.common.base.Objects;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.zip.ZipException;
+import org.apache.maven.artifact.Artifact;
+import org.apache.maven.plugin.logging.Log;
+import org.apache.maven.project.MavenProject;
+import static org.apache.maven.plugins.shade.filter.ClassDependencies.*;
 
 /**
  * A filter that prevents the inclusion of classes not required in the final jar.
- *
  * @author Torsten Curdt
  */
 public class MinijarFilter
     implements Filter
 {
 
-    private Log log;
+  private final Log log;
+  private final Set<String> unusedClasses;
 
-    private Set<Clazz> removable;
+  private int classesKept;
+  private int classesRemoved;
+  private final List<SimpleFilter> simpleFilters;
 
-    private int classesKept;
+  /**
+   * Instantiates a new minijar filter.
+   * @param project the project
+   * @param log the log
+   * @param simpleFilters the simple filters
+   * @throws IOException Signals that an I/O exception has occurred.
+   * @since 1.6
+   */
+  @SuppressWarnings({"unchecked"})
+  public MinijarFilter(MavenProject project, Log log, List<SimpleFilter> simpleFilters)
+      throws IOException {
+    this.log = log;
+    this.simpleFilters = Objects.firstNonNull(simpleFilters, Collections.<SimpleFilter>emptyList());
+    ClassDependencies dependenciesBuilder = new ClassDependencies(this.simpleFilters);
 
-    private int classesRemoved;
+    // for this project artifact all files will be considered included
+    dependenciesBuilder.allClassesSpecificallyIncluded = true;
+    readDependencyJar(dependenciesBuilder, project.getArtifact());
+    dependenciesBuilder.allClassesSpecificallyIncluded = false;
 
-    public MinijarFilter( MavenProject project, Log log )
-        throws IOException
-    {
-        this( project, log, Collections.<SimpleFilter>emptyList() );
+    for (Artifact dependencyArtifact : project.getArtifacts()) {
+      readDependencyJar(dependenciesBuilder, dependencyArtifact);
     }
 
-    /**
-     * @since 1.6
-     */
-    @SuppressWarnings( { "unchecked" } )
-    public MinijarFilter( MavenProject project, Log log, List<SimpleFilter> simpleFilters )
-        throws IOException
-    {
+    // Note: this version do not remove packages. Reason is that they are usually small, contain no
+    // method execution bytecode, but may hold runtime readable annotations. I don't see
+    // any justification to either remove them blindly or rigously inspect if they are potentially
+    // used.
 
-        this.log = log;
+    unusedClasses = dependenciesBuilder.buildAllUnusedClasses();
+  }
 
-        Clazzpath cp = new Clazzpath();
-
-        ClazzpathUnit artifactUnit =
-            cp.addClazzpathUnit( new FileInputStream( project.getArtifact().getFile() ), project.toString() );
-
-        for ( Artifact dependency : project.getArtifacts() )
-        {
-            addDependencyToClasspath( cp, dependency );
-        }
-
-        removable = cp.getClazzes();
-        removePackages( artifactUnit );
-        removable.removeAll( artifactUnit.getClazzes() );
-        removable.removeAll( artifactUnit.getTransitiveDependencies() );
-        removeSpecificallyIncludedClasses( project, simpleFilters == null
-            ? Collections.<SimpleFilter>emptyList()
-            : simpleFilters );
+  private void readDependencyJar(ClassDependencies dependenciesBuilder, Artifact artifact) throws IOException {
+    try {
+      dependenciesBuilder.addJar(artifact.getFile());
+    } catch (ZipException e) {
+      log.warn(String.format("Dependency %s in file %s could not read as JAR file. File is probably corrupt",
+          artifact,
+          artifact.getFile()));
+    } catch (ArrayIndexOutOfBoundsException e) {
+      // trap ArrayIndexOutOfBoundsExceptions caused by malformed dependency classes (MSHADE-107)
+      log.warn(artifact + " could not be analyzed for minimization; dependency is probably malformed.");
     }
+  }
 
-    private ClazzpathUnit addDependencyToClasspath( Clazzpath cp, Artifact dependency )
-        throws IOException
-    {
-        InputStream is = null;
-        ClazzpathUnit clazzpathUnit = null;
-        try
-        {
-            is = new FileInputStream( dependency.getFile() );
-            clazzpathUnit = cp.addClazzpathUnit( is, dependency.toString() );
-        }
-        catch ( ZipException e )
-        {
-            log.warn( dependency.getFile()
-                          + " could not be unpacked/read for minimization; dependency is probably malformed." );
-            IOException ioe = new IOException(
-                "Dependency " + dependency.toString() + " in file " + dependency.getFile()
-                    + " could not be unpacked. File is probably corrupt"
-            );
-            ioe.initCause( e );
-            throw ioe;
-        }
-        catch ( ArrayIndexOutOfBoundsException e )
-        {
-            //trap ArrayIndexOutOfBoundsExceptions caused by malformed dependency classes (MSHADE-107)
-            log.warn(
-                dependency.toString() + " could not be analyzed for minimization; dependency is probably malformed." );
-        }
-        finally
-        {
-            IOUtil.close( is );
-        }
+  public boolean canFilter(File jar) {
+    return true;
+  }
 
-        return clazzpathUnit;
-    }
+  public boolean isFiltered(String name) {
+    if (name.endsWith(CLASS_SUFFIX)) {
+      String typeName = name.substring(0, name.length() - CLASS_SUFFIX.length());
 
-    private void removePackages( ClazzpathUnit artifactUnit )
-    {
-        Set<String> packageNames = new HashSet<String>();
-        removePackages( artifactUnit.getClazzes(), packageNames );
-        removePackages( artifactUnit.getTransitiveDependencies(), packageNames );
-    }
-
-    @SuppressWarnings( "rawtypes" )
-    private void removePackages( Set clazzes, Set<String> packageNames )
-    {
-        for ( Object clazze : clazzes )
-        {
-            Clazz clazz = (Clazz) clazze;
-            String name = clazz.getName();
-            while ( name.contains( "." ) )
-            {
-                name = name.substring( 0, name.lastIndexOf( '.' ) );
-                if ( packageNames.add( name ) )
-                {
-                    removable.remove( new Clazz( name + ".package-info" ) );
-                }
-            }
-        }
-    }
-
-    private void removeSpecificallyIncludedClasses( MavenProject project, List<SimpleFilter> simpleFilters )
-        throws IOException
-    {
-        //remove classes specifically included in filters
-        Clazzpath checkCp = new Clazzpath();
-        for ( Artifact dependency : project.getArtifacts() )
-        {
-            File jar = dependency.getFile();
-
-            for ( SimpleFilter simpleFilter : simpleFilters )
-            {
-                if ( simpleFilter.canFilter( jar ) )
-                {
-                    ClazzpathUnit depClazzpathUnit = addDependencyToClasspath( checkCp, dependency );
-                    if ( depClazzpathUnit != null )
-                    {
-                        Iterator<Clazz> j = removable.iterator();
-                        while ( j.hasNext() )
-                        {
-                            Clazz clazz = j.next();
-
-                            if ( depClazzpathUnit.getClazzes().contains( clazz ) //
-                                && simpleFilter.isSpecificallyIncluded( clazz.getName().replace( '.', '/' ) ) )
-                            {
-                                log.debug( clazz.getName() + " not removed because it was specifically included" );
-                                j.remove();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    public boolean canFilter( File jar )
-    {
+      if (unusedClasses.contains(typeName)) {
+        log.debug("Removing unused class: " + typeName);
+        classesRemoved += 1;
         return true;
+      }
+
+      classesKept += 1;
+      return false;
     }
 
-    public boolean isFiltered( String classFile )
-    {
-        String className = classFile.replace( '/', '.' ).replaceFirst( "\\.class$", "" );
-        Clazz clazz = new Clazz( className );
+    if (name.startsWith(SERVICES_ENTRY_PREFIX)) {
+      String typeName = ClassDependencies.toClassFilePath(
+          name.substring(SERVICES_ENTRY_PREFIX.length()));
 
-        if ( removable.contains( clazz ) )
-        {
-            log.debug( "Removing " + className );
-            classesRemoved += 1;
-            return true;
-        }
-
-        classesKept += 1;
-        return false;
+      if (unusedClasses.contains(typeName)) {
+        log.debug("Removing services for unused class: " + name);
+        return true;
+      }
     }
 
-    public void finished()
-    {
-        int classesTotal = classesRemoved + classesKept;
-        log.info( "Minimized " + classesTotal + " -> " + classesKept + " (" + 100 * classesKept / classesTotal + "%)" );
-    }
+    return false;
+  }
+
+  public void finished() {
+    int classesTotal = classesRemoved + classesKept;
+    log.info("Minimized " + classesTotal + " -> " + classesKept + " (" + 100 * classesKept / classesTotal + "%)");
+  }
 }

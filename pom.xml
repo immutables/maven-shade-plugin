@@ -10,7 +10,7 @@
 
   <groupId>org.immutables.tools</groupId>
   <artifactId>tools</artifactId>
-  <version>3</version>
+  <version>4-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>${project.groupId}.${project.artifactId}</name>

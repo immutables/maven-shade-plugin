@@ -1,4 +1,4 @@
-# Tools for Immutables
+# maven-shade-plugin
 
 ## Customized version of maven-shade-plugin.
 

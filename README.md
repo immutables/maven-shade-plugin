@@ -32,8 +32,8 @@ com.my.internal.$guava$.collect.$ImmutableList
 * Applied class relocations to merged entries
 
 ###3. Minimize Jar that works properly
-* Do not removes used classes: fixed transitive class dependencies problem.
-* Do not remove classes used in `META-INF/services/*` for used service types. Removes `META-INF/services/*` for unused service types. Explicitly include `META-INF/services/**` in filters to not delete such files and make all provider implementation types marked as non-removable.
+* Does not remove used classes: fixed transitive class dependencies problem.
+* Does not remove classes used in `META-INF/services/*` for used service types. Removes `META-INF/services/*` for unused service types. Explicitly include `META-INF/services/**` in filters to not delete such files and make all provider implementation types marked as non-removable.
 
 I would love someone to contribute/reimplement those changes to the original Apache Maven maven-shade-plugin.
 I just couldn't afford time to dive into processes or infrastructure there.

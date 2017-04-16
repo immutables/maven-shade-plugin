@@ -5,10 +5,11 @@
 ```xml
 <groupId>org.immutables.tools</groupId>
 <artifactId>maven-shade-plugin</artifactId>
-<version>3</version>
+<version>4</version>
 ```
 
-###1. Relocation with `$` uglyfication
+### 1. Relocation with `$` uglyfication
+
 Allows class relocation patterns to contain `$` sign.
 If pattern ends with `$` sign, the dollar sign will be prepended in front of class names.
 This effectively prevents clashed during code completion.
@@ -26,12 +27,13 @@ The above pattern will result in `ImmutableList` being relocated as
 com.my.internal.$guava$.collect.$ImmutableList
 ```
 
-###2. ServiceResourceTransformer that actually works properly
+### 2. ServiceResourceTransformer that actually works properly
 
 * Merges `META-INF/services/*` entries with deduplication of lines
 * Applied class relocations to merged entries
 
-###3. Minimize Jar that works properly
+### 3. Minimize Jar that works properly
+
 * Does not remove used classes: fixed transitive class dependencies problem.
 * Does not remove classes used in `META-INF/services/*` for used service types. Removes `META-INF/services/*` for unused service types. Explicitly include `META-INF/services/**` in filters to not delete such files and make all provider implementation types marked as non-removable.
 

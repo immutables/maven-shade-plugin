@@ -30,7 +30,7 @@ under the License.
 
   <groupId>org.immutables.tools</groupId>
   <artifactId>maven-shade-plugin</artifactId>
-  <version>4-SNAPSHOT</version>
+  <version>4</version>
   <packaging>maven-plugin</packaging>
 
   <name>${project.groupId}.${project.artifactId}</name>

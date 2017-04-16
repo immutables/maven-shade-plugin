@@ -19,12 +19,12 @@ package org.apache.maven.plugins.shade.relocation;
  * under the License.
  */
 
-import org.codehaus.plexus.util.SelectorUtils;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.codehaus.plexus.util.SelectorUtils;
 
 /**
  * @author Jason van Zyl
@@ -205,18 +205,11 @@ public class SimpleRelocator
   public String relocatePath(String path)
   {
     try {
-      if (rawString)
-      {
-        return unescapeRelocationResult(path.replaceAll(pathPattern, escapeSubstitution(shadedPathPattern)),
-            shadedPathPattern,
-            '/');
-      }
-      else
-      {
-        return unescapeRelocationResult(path.replaceFirst(pathPattern, escapeSubstitution(shadedPathPattern)),
-            shadedPathPattern,
-            '/');
-      }
+      return rawString
+          ? unescapeRelocationResult(path.replaceAll(pathPattern, escapeSubstitution(shadedPathPattern)),
+              shadedPathPattern, '/')
+          : unescapeRelocationResult(path.replaceFirst(pathPattern, escapeSubstitution(shadedPathPattern)),
+              shadedPathPattern, '/');
 
     } catch (RuntimeException ex) {
 // rawString= false,
@@ -237,13 +230,8 @@ public class SimpleRelocator
 
   public String applyToSourceContent(String sourceContent)
   {
-    if (rawString)
-    {
-      return sourceContent;
-    }
-    else
-    {
-      return sourceContent.replaceAll("\\b" + pattern, shadedPattern);
-    }
+    return rawString
+        ? sourceContent
+        : sourceContent.replaceAll("\\b" + pattern, shadedPattern);
   }
 }

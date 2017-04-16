@@ -47,7 +47,7 @@ under the License.
   <properties>
     <mavenVersion>3.0</mavenVersion>
     <currentVersion>${project.version}</currentVersion>
-    <asmVersion>5.0.4</asmVersion>
+    <asmVersion>5.2</asmVersion>
     <checkstyle.skip>true</checkstyle.skip>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <sonatypeOssDistMgmtSnapshotsUrl>https://oss.sonatype.org/content/repositories/snapshots/</sonatypeOssDistMgmtSnapshotsUrl>

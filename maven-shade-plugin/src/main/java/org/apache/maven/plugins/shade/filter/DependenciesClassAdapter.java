@@ -27,9 +27,9 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.TypePath;
 import org.objectweb.asm.commons.Remapper;
-import org.objectweb.asm.commons.RemappingClassAdapter;
+import org.objectweb.asm.commons.ClassRemapper;
 
-final class DependenciesClassAdapter extends RemappingClassAdapter {
+final class DependenciesClassAdapter extends ClassRemapper {
   private static final DeepVisitor ev = new DeepVisitor();
 
   static DependenciesClassAdapter readFrom(InputStream input) throws IOException {
@@ -51,12 +51,12 @@ final class DependenciesClassAdapter extends RemappingClassAdapter {
   }
 
   private static class CollectingRemapper extends Remapper {
-    final Set<String> classes = new HashSet<String>();
+    final Set<String> classes = new HashSet<String>(256);
 
     @Override
-    public String map(String pClassName) {
-      classes.add(pClassName);
-      return pClassName;
+    public String map(String className) {
+      classes.add(className);
+      return className;
     }
   }
 
@@ -65,7 +65,7 @@ final class DependenciesClassAdapter extends RemappingClassAdapter {
       super(Opcodes.ASM5);
     }
 
-    private static final AnnotationVisitor av = new AnnotationVisitor(Opcodes.ASM4) {
+    private static final AnnotationVisitor av = new AnnotationVisitor(Opcodes.ASM5) {
 
       @Override
       public AnnotationVisitor visitAnnotation(String name, String desc) {
@@ -78,7 +78,7 @@ final class DependenciesClassAdapter extends RemappingClassAdapter {
       }
     };
 
-    private static final MethodVisitor mv = new MethodVisitor(Opcodes.ASM4) {
+    private static final MethodVisitor mv = new MethodVisitor(Opcodes.ASM5) {
 
       @Override
       public AnnotationVisitor visitAnnotationDefault() {
@@ -92,17 +92,24 @@ final class DependenciesClassAdapter extends RemappingClassAdapter {
       }
 
       @Override
-      public AnnotationVisitor visitParameterAnnotation(
-          int parameter, String desc, boolean visible) {
+      public AnnotationVisitor visitParameterAnnotation(int parameter, String desc, boolean visible) {
+        return av;
+      }
+
+      @Override
+      public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
         return av;
       }
     };
 
-    private static final FieldVisitor fieldVisitor = new FieldVisitor(Opcodes.ASM4)
-    {
+    private static final FieldVisitor fieldVisitor = new FieldVisitor(Opcodes.ASM4) {
       @Override
-      public AnnotationVisitor visitAnnotation(String desc, boolean visible)
-      {
+      public AnnotationVisitor visitAnnotation(String desc, boolean visible) {
+        return av;
+      }
+
+      @Override
+      public AnnotationVisitor visitTypeAnnotation(int typeRef, TypePath typePath, String desc, boolean visible) {
         return av;
       }
     };

@@ -77,12 +77,12 @@ public class ApacheNoticeResourceTransformer
     String encoding;
 
     private static final String NOTICE_PATH = "META-INF/NOTICE";
-
+    private static final String NOTICE_MD_PATH = "META-INF/NOTICE.md";
     private static final String NOTICE_TXT_PATH = "META-INF/NOTICE.txt";
 
     public boolean canTransformResource( String resource )
     {
-        if ( NOTICE_PATH.equalsIgnoreCase( resource ) || NOTICE_TXT_PATH.equalsIgnoreCase( resource ) )
+        if ( NOTICE_PATH.equalsIgnoreCase( resource ) || NOTICE_TXT_PATH.equalsIgnoreCase( resource ) || NOTICE_MD_PATH.equalsIgnoreCase( resource ) )
         {
             return true;
         }
